@@ -12,7 +12,7 @@
   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   * See the License for the specific language governing permissions and
   * limitations under the License.
-  * 
+  *
   * This file has been modified by Snap, Inc.
   */
 
@@ -46,6 +46,22 @@ class ObjcGenerator(spec: Spec) extends BaseObjcGenerator(spec) {
     }
   }
 
+  def deprecatedAttr(doc: Doc): String = {
+    deprecatedText(doc) match {
+      case Some("") => "__deprecated"
+      case Some(reason) => s"""__deprecated_msg("$reason")"""
+      case None => ""
+    }
+  }
+
+  def writeDocAttributes(w: IndentWriter, doc: Doc): Unit = {
+    deprecatedText(doc) match {
+      case Some("") => w.wl("__deprecated")
+      case Some(reason) => w.wl(s"""__deprecated_msg("$reason")""")
+      case None =>
+    }
+  }
+
   override def generateEnum(origin: String, ident: Ident, doc: Doc, e: Enum) {
     val refs = new ObjcRefs()
 
@@ -54,6 +70,7 @@ class ObjcGenerator(spec: Spec) extends BaseObjcGenerator(spec) {
     val self = marshal.typename(ident, e)
     writeObjcFile(marshal.headerName(ident), origin, refs.header, w => {
       writeDoc(w, doc)
+      writeDocAttributes(w, doc)
       w.wl(if(e.flags) {
         s"typedef NS_OPTIONS(NSInteger, $self)"
       } else {
@@ -131,11 +148,13 @@ class ObjcGenerator(spec: Spec) extends BaseObjcGenerator(spec) {
         writeDoc(w, c.doc)
         w.w(s"extern ")
         writeObjcConstVariableDecl(w, c, self)
+        w.w(deprecatedAttr(c.doc))
         w.wl(s";")
       }
 
       w.wl
       writeDoc(w, doc)
+      writeDocAttributes(w, doc)
       if (useProtocol(i.ext, spec)) {
         val baseProtocol = if (spec.objcStrictProtocol) " <NSObject>" else ""
         w.wl(s"@protocol $self$baseProtocol")
@@ -148,6 +167,7 @@ class ObjcGenerator(spec: Spec) extends BaseObjcGenerator(spec) {
           w.wl
           writeMethodDoc(w, m, idObjc.local)
           writeObjcFuncDecl(m, w)
+          w.w(deprecatedAttr(m.doc))
           w.wl(";")
         }
       }
@@ -210,6 +230,7 @@ class ObjcGenerator(spec: Spec) extends BaseObjcGenerator(spec) {
     // Generate the header file for record
     writeObjcFile(marshal.headerName(objcName), origin, refs.header, w => {
       writeDoc(w, doc)
+      writeDocAttributes(w, doc)
 
       if (r.derivingTypes.contains(DerivingType.NSCopying)) {
         w.wl(s"@interface $self : NSObject<NSCopying>")
@@ -260,11 +281,12 @@ class ObjcGenerator(spec: Spec) extends BaseObjcGenerator(spec) {
         w.wl
         writeDoc(w, f.doc)
         val nullability = marshal.nullability(f.ty.resolved).fold("")(", " + _)
+        val deprecated = deprecatedAttr(f.doc)
 
         // If using legacy constructors, add the readonly property. Otherwise determine if the
         // copy property is necessary
         val readOnly = if (spec.objcLegacyRecords) ", readonly" else if (checkMutable(f.ty.resolved)) ", copy" else ""
-        w.wl(s"@property (nonatomic${readOnly}${nullability}) ${marshal.fqFieldType(f.ty)} ${idObjc.field(f.ident)};")
+        w.wl(s"@property (nonatomic${readOnly}${nullability}) ${marshal.fqFieldType(f.ty)} ${idObjc.field(f.ident)}${deprecated};")
       }
       if (r.derivingTypes.contains(DerivingType.Ord)) {
         w.wl
@@ -279,6 +301,7 @@ class ObjcGenerator(spec: Spec) extends BaseObjcGenerator(spec) {
           writeDoc(w, c.doc)
           w.w(s"extern ")
           writeObjcConstVariableDecl(w, c, noBaseSelf);
+          w.w(deprecatedAttr(c.doc))
           w.wl(s";")
         }
       }
@@ -287,7 +310,7 @@ class ObjcGenerator(spec: Spec) extends BaseObjcGenerator(spec) {
     // Generate the implementation file for record
     writeObjcFile(bodyName(objcName), origin, refs.body, w => {
       if (r.consts.nonEmpty) generateObjcConstants(w, r.consts, noBaseSelf, ObjcConstantType.ConstVariable)
-      
+
       w.wl
       w.wl(s"@implementation $self")
       w.wl

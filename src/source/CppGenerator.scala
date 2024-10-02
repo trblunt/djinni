@@ -34,6 +34,22 @@ class CppGenerator(spec: Spec) extends Generator(spec) {
   def writeHppFile(name: String, origin: String, includes: Iterable[String], fwds: Iterable[String], f: IndentWriter => Unit, f2: IndentWriter => Unit = (w => {})) =
     writeHppFileGeneric(spec.cppHeaderOutFolder.get, spec.cppNamespace, spec.cppFileIdentStyle)(name, origin, includes, fwds, f, f2)
 
+  def writeDeprecated(w: IndentWriter, doc: Doc): Unit = {
+    deprecatedText(doc) match {
+      case None =>
+      case Some("") => w.wl("[[deprecated]]")
+      case Some(reason) => w.wl(s"""[[deprecated("$reason")]]""")
+    }
+  }
+
+  def deprecatedAttr(doc: Doc) = {
+    deprecatedText(doc) match {
+      case None => ""
+      case Some("") => " [[deprecated]]"
+      case Some(reason) => s""" [[deprecated("$reason")]]"""
+    }
+  }
+
   class CppRefs(name: String) {
     var hpp = mutable.TreeSet[String]()
     var hppFwds = mutable.TreeSet[String]()
@@ -59,6 +75,15 @@ class CppGenerator(spec: Spec) extends Generator(spec) {
     }
   }
 
+  override def writeEnumOptions(w: IndentWriter, e: Enum, ident: IdentConverter, delim: String = "=", prefix: String = "", lineEnd: String = ",") {
+    var shift = 0
+    for (o <- normalEnumOptions(e)) {
+      writeDoc(w, o.doc)
+      w.wl(idCpp.enum(o.ident.name) + deprecatedAttr(o.doc) + (if (e.flags) s" = 1 << $shift" else s" = $shift") + ",")
+      shift += 1
+    }
+  }
+
   override def generateEnum(origin: String, ident: Ident, doc: Doc, e: Enum) {
     val refs = new CppRefs(ident.name)
     val self = marshal.typename(ident, e)
@@ -70,10 +95,11 @@ class CppGenerator(spec: Spec) extends Generator(spec) {
     val flagsType = "int32_t"
     val enumType = "int"
     val underlyingType = if(e.flags) flagsType else enumType
+    val deprecatedType = deprecatedAttr(doc)
 
     writeHppFile(ident, origin, refs.hpp, refs.hppFwds, w => {
       writeDoc(w, doc)
-      w.w(s"enum class $self : $underlyingType").bracedSemi {
+      w.w(s"enum class${deprecatedType} $self : $underlyingType").bracedSemi {
         writeEnumOptionNone(w, e, idCpp.enum)
         writeEnumOptions(w, e, idCpp.enum)
         writeEnumOptionAll(w, e, idCpp.enum)
@@ -156,6 +182,7 @@ class CppGenerator(spec: Spec) extends Generator(spec) {
       // Write code to the header file
       w.wl
       writeDoc(w, c.doc)
+      writeDeprecated(w, c.doc)
       w.wl(s"static ${constFieldType} ${idCpp.const(c.ident)}${constValue}")
     }
   }
@@ -213,6 +240,8 @@ class CppGenerator(spec: Spec) extends Generator(spec) {
       refs.cpp.add("#include "+q(spec.cppExtendedRecordIncludePrefix + spec.cppFileIdentStyle(ident) + "." + spec.cppHeaderExt))
     }
 
+    val deprecationType = deprecatedAttr(doc) + " "
+
     // C++ Header
     def writeCppPrototype(w: IndentWriter) {
       if (r.ext.cpp) {
@@ -222,12 +251,13 @@ class CppGenerator(spec: Spec) extends Generator(spec) {
       }
       writeDoc(w, doc)
       writeCppTypeParams(w, params)
-      w.w("struct " + actualSelf + cppFinal).bracedSemi {
+      w.w("struct" + deprecationType + actualSelf + cppFinal).bracedSemi {
         generateHppConstants(w, r.consts)
 
         // Field definitions.
         for (f <- r.fields) {
           writeDoc(w, f.doc)
+          writeDeprecated(w, f.doc)
           w.wl(marshal.fieldType(f.ty) + " " + idCpp.field(f.ident) + ";")
         }
 
@@ -376,7 +406,7 @@ class CppGenerator(spec: Spec) extends Generator(spec) {
     writeHppFile(ident, origin, refs.hpp, refs.hppFwds, w => {
       writeDoc(w, doc)
       writeCppTypeParams(w, typeParams)
-      w.w(s"class $self").bracedSemi {
+      w.w(s"class" + deprecatedAttr(doc) + s" $self").bracedSemi {
         w.wlOutdent("public:")
         // Destructor
         w.wl(s"virtual ~$self() = default;")
@@ -386,6 +416,7 @@ class CppGenerator(spec: Spec) extends Generator(spec) {
         for (m <- i.methods) {
           w.wl
           writeMethodDoc(w, m, idCpp.local)
+          writeDeprecated(w, m.doc)
           val ret = marshal.returnType(m.ret, methodNamesInScope)
           val params = m.params.map(p => marshal.paramType(p.ty, methodNamesInScope) + " " + idCpp.local(p.ident))
           if (m.static) {

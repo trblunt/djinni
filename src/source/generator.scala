@@ -12,7 +12,7 @@
   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   * See the License for the specific language governing permissions and
   * limitations under the License.
-  * 
+  *
   * This file has been modified by Snap, Inc.
   */
 
@@ -179,7 +179,7 @@ package object generatorTools {
   object IdentStyle {
     private val camelUpperStrict = (s: String) => {
         s.split("[-_]").map(leadingUpperStrict).mkString
-    } 
+    }
     private val camelLowerStrict = (s: String) => {
       val parts = s.split('_')
       parts.head.toLowerCase + parts.tail.map(leadingUpperStrict).mkString
@@ -215,7 +215,7 @@ package object generatorTools {
       "Foo_Bar!" -> underUpperStrict,
       "FOO_BAR!" -> underCaps
     )
-    
+
     def infer(input: String): Option[IdentConverter] = {
       styles.foreach((e) => {
         val (str, func) = e
@@ -576,6 +576,25 @@ abstract class Generator(spec: Spec)
         w.wl("/**")
         doc.lines.foreach (l => w.wl(s" *$l"))
         w.wl(" */")
+    }
+  }
+
+  def deprecatedText(doc: Doc): Option[String] = {
+    val pattern = """\s*@deprecated\(?(.*?)\)?$""".r
+    for (l <- doc.lines) {
+      l match {
+        case pattern(message) =>
+          return Some(message.trim())
+        case _ => // no match
+      }
+    }
+    return None
+  }
+
+  def writeDeprecated(w: IndentWriter, doc: Doc, annotation: String) {
+    deprecatedText(doc) match {
+      case Some(message) => w.wl(annotation.replace("<message>", message))
+      case None          =>
     }
   }
 }
