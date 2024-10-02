@@ -57,6 +57,16 @@ class SwiftGenerator(spec: Spec) extends Generator(spec) {
     })
   }
 
+  override def writeEnumOptions(w: IndentWriter, e: Enum, ident: IdentConverter, delim: String = "=", prefix: String = "", lineEnd: String = ",") {
+    var shift = 0
+    for (o <- normalEnumOptions(e)) {
+      writeDoc(w, o.doc)
+      writeDocAttributes(w, o.doc)
+      w.wl(prefix + ident(o.ident.name) + (if(e.flags) s" $delim 1 << $shift" else s" $delim $shift") + lineEnd)
+      shift += 1
+    }
+  }
+
   def writeFlagNone(w: IndentWriter, e: Enum, ident: IdentConverter, t: String) {
     for (o <- e.options.find(_.specialFlag == Some(Enum.SpecialFlag.NoFlags))) {
       writeDoc(w, o.doc)
@@ -67,6 +77,7 @@ class SwiftGenerator(spec: Spec) extends Generator(spec) {
     var shift = 0
     for (o <- normalEnumOptions(e)) {
       writeDoc(w, o.doc)
+      writeDocAttributes(w, o.doc)
       w.wl(s"public static let ${ident(o.ident.name)} = $t(rawValue: 1 << $shift)")
       shift += 1
     }
@@ -83,11 +94,20 @@ class SwiftGenerator(spec: Spec) extends Generator(spec) {
     }
   }
 
+  def writeDocAttributes(w: IndentWriter, doc: Doc) {
+    deprecatedText(doc) match {
+      case Some("") => w.wl("@available(*, deprecated)")
+      case Some(reason) => w.wl(s"""@available(*, deprecated, message: "${reason}")""")
+      case None =>
+    }
+  }
+
   override def generateEnum(origin: String, ident: Ident, doc: Doc, e: Enum) {
     writeSwiftFile(ident, origin, List[String](), w => {
       val t = marshal.typename(ident, e)
       if (e.flags) {
         writeDoc(w, doc)
+        writeDocAttributes(w, doc)
         w.w(s"public struct $t: OptionSet").braced {
           w.wl("public let rawValue: Int32")
           w.wl("public init(rawValue: Int32) { self.rawValue = rawValue }")
@@ -97,6 +117,7 @@ class SwiftGenerator(spec: Spec) extends Generator(spec) {
         }
       } else {
         writeDoc(w, doc)
+        writeDocAttributes(w, doc)
         w.w(s"public enum ${marshal.typename(ident, e)}: Int32").braced {
           writeEnumOptions(w, e, idSwift.enum, "=", "case ", "")
         }
@@ -171,6 +192,7 @@ class SwiftGenerator(spec: Spec) extends Generator(spec) {
 
     for (c <- consts) {
       writeDoc(w, c.doc)
+      writeDocAttributes(w, c.doc)
       w.w(s"public static let ${idSwift.const(c.ident)}: ${marshal.fieldType(c.ty)} = ")
       writeSwiftConst(w, c.ty, c.value)
       w.wl
@@ -192,10 +214,12 @@ class SwiftGenerator(spec: Spec) extends Generator(spec) {
     r.fields.foreach(f => refs.find(f.ty))
     writeSwiftFile(ident, origin, refs.swiftImports, w => {
       writeDoc(w, doc)
+      writeDocAttributes(w, doc)
       w.w(s"public struct ${marshal.typename(ident, r)}${generateConformance(r.derivingTypes, ": ")}").braced {
         generateSwiftConstants(w, r.consts)
         for (f <- r.fields) {
           writeDoc(w, f.doc)
+          writeDocAttributes(w, f.doc)
           w.wl(s"public var ${idSwift.field(f.ident)}: ${marshal.fqFieldType(f.ty)}")
         }
         val initParams = r.fields.map(f => s"${idSwift.field(f.ident)}: ${marshal.fqFieldType(f.ty)}").mkString(", ")
@@ -247,9 +271,11 @@ class SwiftGenerator(spec: Spec) extends Generator(spec) {
     })
     writeSwiftFile(ident, origin, refs.swiftImports, w => {
       writeDoc(w, doc)
+      writeDocAttributes(w, doc)
       w.w(s"public protocol ${marshal.typename(ident, i)}: AnyObject").braced {
         for (m <- i.methods.filter(!_.static)) {
           writeMethodDoc(w, m, idSwift.local)
+          writeDocAttributes(w, m.doc)
           w.w(s"func ${swiftMethodName(m.ident)}(")
           // skip label for the first parameter
           if (m.params.nonEmpty) { w.w("_ ") }
@@ -260,6 +286,7 @@ class SwiftGenerator(spec: Spec) extends Generator(spec) {
     })
     writeSwiftPrivateFile(ident, origin, refs.privateImports, w => {
       writeDoc(w, doc)
+      writeDocAttributes(w, doc)
       // Define CppProxy class if interface is implemented in C++
       if (i.ext.cpp) {
         w.w(s"final class ${marshal.typename(ident, i)}CppProxy: DjinniSupport.CppProxy, ${marshal.fqTypename(ident, i)}").braced {
@@ -329,6 +356,7 @@ class SwiftGenerator(spec: Spec) extends Generator(spec) {
         w.w(s"public class ${marshal.typename(ident, i)}_statics").braced {
           for (m <- staticMethods) {
             writeMethodDoc(w, m, idSwift.local)
+            writeDocAttributes(w, m.doc)
             w.w(s"public static func ${swiftMethodName(m.ident)}(")
             if (m.params.nonEmpty) { w.w("_ ") }
             w.w(m.params.map(p => s"${idSwift.local(p.ident)}: ${marshal.fqParamType(p.ty)}").mkString(", "))
