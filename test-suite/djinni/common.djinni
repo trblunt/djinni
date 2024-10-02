@@ -1,5 +1,6 @@
 @import "set.djinni"
 @import "derivings.djinni"
+@import "deprecated.djinni"
 @import "nested_collection.djinni"
 @import "map.djinni"
 @import "primitive_list.djinni"

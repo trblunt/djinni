@@ -2,6 +2,7 @@ djinni/all.djinni
 djinni/common.djinni
 djinni/set.djinni
 djinni/derivings.djinni
+djinni/deprecated.djinni
 djinni/nested_collection.djinni
 djinni/map.djinni
 djinni/primitive_list.djinni

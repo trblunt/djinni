@@ -586,6 +586,66 @@ export interface /*record*/ NestedCollection {
     setList: Array<Set<string>>;
 }
 
+/** @deprecated */
+export enum DeprecatedEnum {
+    FOO = 0,
+    /** @deprecated */
+    BAR = 1,
+    /** @deprecated This is a deprecation message */
+    BAZ = 2,
+}
+
+/** @deprecated This is a deprecation message */
+export enum DeprecatedEnumWithMessage {
+    FOO = 0,
+    /** @deprecated */
+    BAR = 1,
+    /** @deprecated This is a deprecation message */
+    BAZ = 2,
+}
+
+/** @deprecated */
+export interface /*record*/ DeprecatedRecord {
+    foo: number;
+    /** @deprecated */
+    bar: number;
+    /** @deprecated This is a deprecation message */
+    baz: number;
+}
+
+/** @deprecated This is a deprecation message */
+export interface /*record*/ DeprecatedRecordWithMessage {
+    foo: number;
+    /** @deprecated */
+    bar: number;
+    /** @deprecated This is a deprecation message */
+    baz: number;
+}
+
+/** @deprecated */
+export interface DeprecatedInterface {
+    /** @deprecated */
+    foo(): number;
+    /** @deprecated This is a deprecation message */
+    bar(): number;
+}
+export namespace DeprecatedInterface {
+    /** @deprecated Deprecated constant */
+    export const BAZ = 0;
+}
+
+/** @deprecated This is a deprecation message */
+export interface DeprecatedInterfaceWithMessage {
+    /** @deprecated */
+    foo(): number;
+    /** @deprecated This is a deprecation message */
+    bar(): number;
+}
+export namespace DeprecatedInterfaceWithMessage {
+    /** @deprecated Deprecated constant */
+    export const BAZ = 0;
+}
+
 export interface /*record*/ RecordWithDerivings {
     eight: number;
     sixteen: number;

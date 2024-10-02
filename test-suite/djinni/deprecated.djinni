@@ -1,0 +1,57 @@
+# @deprecated
+deprecated_enum = enum {
+	foo;
+    # @deprecated
+	bar;
+    # @deprecated This is a deprecation message
+    baz;
+}
+
+# @deprecated This is a deprecation message
+deprecated_enum_with_message = enum {
+    foo;
+    # @deprecated
+    bar;
+    # @deprecated This is a deprecation message
+    baz;
+}
+
+# @deprecated
+deprecated_record = record {
+    foo: i32;
+    # @deprecated
+    bar: i32;
+    # @deprecated This is a deprecation message
+    baz: i32;
+}
+
+# @deprecated This is a deprecation message
+deprecated_record_with_message = record {
+    foo: i32;
+    # @deprecated
+    bar: i32;
+    # @deprecated This is a deprecation message
+    baz: i32;
+}
+
+# @deprecated
+deprecated_interface = interface +c +j +o +sw {
+    # @deprecated
+    foo(): i32;
+    # @deprecated This is a deprecation message
+    bar(): i32;
+
+    # @deprecated Deprecated constant
+    const baz: i32 = 0;
+}
+
+# @deprecated This is a deprecation message
+deprecated_interface_with_message = interface +c +j +o +sw {
+    # @deprecated
+    foo(): i32;
+    # @deprecated This is a deprecation message
+    bar(): i32;
+
+    # @deprecated Deprecated constant
+    const baz: i32 = 0;
+}
