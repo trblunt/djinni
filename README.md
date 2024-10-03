@@ -69,6 +69,7 @@ verify the build and binary from the command line.
  - Generating string names for C++ enums
  - Omit optional parameters from record constructors
  - Records are default mutable across all platforms
+ - @deprecated annotation support
  - Bug fixes
 
 ## Using new features
@@ -377,6 +378,17 @@ Djinni records are now mutable and do not require optionals in reocrd constructo
 ```
 
 Note that for C++, the legacy flag will only remove the optional-omitting constructor. Records were already mutable within C++.
+
+## @deprecated annotation support
+
+Including the `@deprecated` annotation in an IDL file comment will now generate language-specific deprecation markup in the generated code. 
+The syntax for the annotation is as follows:
+
+```
+# @deprecated [reason]
+```
+
+Providing a deprecation reason is optional. If provided, the reason will be included as a deprecation message in the generated code.
 
 ## FAQ
 
